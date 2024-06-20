@@ -2,19 +2,32 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"github.com/gorilla/mux"
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promauto"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/paulosman/ticket-service/db"
 )
 
 type HandlerFunc func(http.ResponseWriter, *http.Request)
 
+var (
+	httpRequestsTotal = promauto.NewCounterVec(prometheus.CounterOpts{
+		Name: "http_requests_total",
+		Help: "Total number of http requests",
+	}, []string{"method", "request_path"})
+)
+
 func NewRouter() *mux.Router {
 	router := mux.NewRouter()
 	database := db.NewDatabase()
+
+	router.Handle("/metrics", promhttp.Handler())
 
 	router.HandleFunc("/status", StatusHandler())
 	router.HandleFunc("/events", AddEventHandler(database)).Methods("POST")
@@ -73,6 +86,7 @@ func GetEventHandler(database *db.Database) HandlerFunc {
 			error(w, http.StatusBadRequest, r.Method, "/events/:id", "Invalid id provided: "+err.Error())
 			return
 		}
+
 		event := database.GetEvent(int32(id))
 		if event == nil {
 			error(w, http.StatusNotFound, r.Method, "/events/:id", "no event found")
@@ -123,6 +137,7 @@ func ok(w http.ResponseWriter, method string, path string, body interface{}) {
 }
 
 func respond(w http.ResponseWriter, code int, method string, path string, body interface{}) {
+	httpRequestsTotal.WithLabelValues(fmt.Sprintf("%d", code), path).Inc()
 	response, _ := json.Marshal(body)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
