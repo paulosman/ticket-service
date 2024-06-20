@@ -60,6 +60,10 @@ func GetEventHandler(database *db.Database) HandlerFunc {
 			return
 		}
 		event := database.GetEvent(int32(id))
+		if event == nil {
+			error(w, http.StatusNotFound, "no event found")
+			return
+		}
 		ok(w, event)
 	}
 }
@@ -108,5 +112,4 @@ func respond(w http.ResponseWriter, code int, body interface{}) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(code)
 	w.Write(response)
-
 }
