@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"log"
 	"net/http"
 	"strconv"
 
@@ -9,6 +10,13 @@ import (
 
 	"github.com/paulosman/ticket-service/db"
 )
+
+func loggingMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		log.Println(r.RequestURI)
+		next.ServeHTTP(w, r)
+	})
+}
 
 type HandlerFunc func(http.ResponseWriter, *http.Request)
 
@@ -23,6 +31,7 @@ func NewRouter() *mux.Router {
 	router.HandleFunc("/events/{id:[0-9]+}", DeleteEventHandler(database)).Methods("DELETE")
 	router.HandleFunc("/events/{id:[0-9]+}/ticket", CreateTicketHandler(database)).Methods("POST")
 
+	router.Use(loggingMiddleware)
 	return router
 }
 
