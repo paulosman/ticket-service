@@ -16,5 +16,5 @@ func NewEvent(name string, capacity int) *Event {
 }
 
 func (e *Event) CapacityLeft() int {
-	return len(e.Tickets) - e.Capacity
+	return e.Capacity - len(e.Tickets)
 }

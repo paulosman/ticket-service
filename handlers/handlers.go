@@ -106,14 +106,15 @@ func CreateTicketHandler(database *db.Database) HandlerFunc {
 			error(w, http.StatusBadRequest, r.Method, path, "Error decoding payload: "+err.Error())
 			return
 		}
-		event := database.GetEvent(int32(id))
-		if event.CapacityLeft() == 0 {
+		event, added := database.AddTicketToEvent(int32(id), ticket)
+		if event == nil {
+			error(w, http.StatusNotFound, r.Method, path, "no event found")
+			return
+		}
+		if !added {
 			error(w, http.StatusForbidden, r.Method, path, "Insufficient capacity for event")
 			return
 		}
-		ticket.EventId = int32(id)
-		event.Tickets = append(event.Tickets, ticket)
-		database.AddEvent(event)
 
 		ok(w, r.Method, path, event)
 	}

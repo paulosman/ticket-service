@@ -17,33 +17,50 @@ func NewDatabase() *Database {
 
 func (d *Database) AddEvent(event *Event) bool {
 	d.mutex.Lock()
+	defer d.mutex.Unlock()
 	if event.Id == 0 {
 		event.Id = d.nextEventId
 		d.nextEventId++
 	}
 	d.Events[event.Id] = event
-	d.mutex.Unlock()
 	return true
 }
 
 func (d *Database) GetEvents() []*Event {
 	d.mutex.Lock()
+	defer d.mutex.Unlock()
 	events := make([]*Event, 0)
 	for _, event := range d.Events {
-		events = append(events, event)
+		if event != nil {
+			events = append(events, event)
+		}
 	}
-	d.mutex.Unlock()
 	return events
 }
 
 func (d *Database) GetEvent(id int32) *Event {
-	var event *Event
 	d.mutex.Lock()
-	event = d.Events[id]
-	d.mutex.Unlock()
-	return event
+	defer d.mutex.Unlock()
+	return d.Events[id]
 }
 
 func (d *Database) DeleteEvent(id int32) {
-	d.Events[id] = nil
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+	delete(d.Events, id)
+}
+
+func (d *Database) AddTicketToEvent(id int32, ticket Ticket) (*Event, bool) {
+	d.mutex.Lock()
+	defer d.mutex.Unlock()
+	event := d.Events[id]
+	if event == nil {
+		return nil, false
+	}
+	if event.CapacityLeft() == 0 {
+		return event, false
+	}
+	ticket.EventId = id
+	event.Tickets = append(event.Tickets, ticket)
+	return event, true
 }
